@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 챗봇</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-container {
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .session-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .session-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        .session-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 16px;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .message.bot .message-avatar {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            color: #333;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        .message.user .message-time {
+            text-align: right;
+        }
+
+        .message.bot .message-time {
+            text-align: left;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #eee;
+        }
+
+        .chat-input-form {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #eee;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 18px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #999;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .special-response {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .summary-item {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .summary-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .summary-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .history-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+        }
+
+        .search-result {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+        }
+
+        .error-message {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            color: #c62828;
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                width: 95%;
+                height: 95vh;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .session-controls {
+                position: static;
+                margin-top: 10px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🤖 AI 챗봇</h1>
+            <p>규칙 기반 + LLM 하이브리드 챗봇</p>
+            <div class="session-controls">
+                <button class="session-btn" onclick="loadSessions()">세션 목록</button>
+                <button class="session-btn" onclick="clearChat()">초기화</button>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    안녕하세요! AI 챗봇입니다. 무엇을 도와드릴까요?<br>
+                    <small>특별 명령어: '히스토리', '요약', '검색 [키워드]', '초기화', '도움말'</small>
+                </div>
+                <div class="message-time" id="welcomeTime"></div>
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            <div class="typing-dots">
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <form class="chat-input-form" id="chatForm">
+                <textarea 
+                    class="chat-input" 
+                    id="messageInput" 
+                    placeholder="메시지를 입력하세요..."
+                    rows="1"
+                    onkeydown="handleKeyDown(event)"
+                ></textarea>
+                <button type="submit" class="send-btn" id="sendBtn">전송</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentSessionId = 'default_' + Date.now();
+        let isTyping = false;
+
+        // 페이지 로드 시 현재 시간 표시
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            document.getElementById('welcomeTime').textContent = now.toLocaleTimeString();
+        });
+
+        // 엔터키 처리
+        function handleKeyDown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // 메시지 전송
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || isTyping) return;
+            
+            // 사용자 메시지 추가
+            addMessage('user', message);
+            input.value = '';
+            
+            // 타이핑 표시
+            showTyping();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: currentSessionId
+                    })
+                });
+                
+                const data = await response.json();
+                hideTyping();
+                
+                if (data.type === 'history') {
+                    addSpecialResponse('대화 기록', data.history);
+                } else if (data.type === 'summary') {
+                    addSummaryResponse(data.summary);
+                } else if (data.type === 'search') {
+                    addSearchResponse(data.search_results);
+                } else if (data.type === 'clear') {
+                    clearChatMessages();
+                } else if (data.type === 'help') {
+                    addMessage('bot', data.response);
+                } else {
+                    addMessage('bot', data.response);
+                }
+                
+            } catch (error) {
+                hideTyping();
+                addErrorMessage('오류가 발생했습니다: ' + error.message);
+            }
+        }
+
+        // 메시지 추가
+        function addMessage(role, content) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${role === 'user' ? '👤' : '🤖'}</div>
+                <div class="message-content">${content.replace(/\n/g, '<br>')}</div>
+                <div class="message-time">${timeString}</div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 특별 응답 추가 (히스토리)
+        function addSpecialResponse(title, data) {
+            const chatMessages = document.getElementById('chatMessages');
+            const responseDiv = document.createElement('div');
+            responseDiv.className = 'message bot';
+            
+            let content = `<div class="special-response">
+                <strong>${title}</strong><br>`;
+            
+            if (Array.isArray(data)) {
+                data.forEach((item, index) => {
+                    const role = item.role === 'user' ? '사용자' : '봇';
+                    const time = new Date(item.timestamp).toLocaleString();
+                    content += `${index + 1}. [${time}] ${role}: ${item.content}<br>`;
+                });
+            }
+            
+            content += '</div>';
+            
+            responseDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">${content}</div>
+                <div class="message-time">${new Date().toLocaleTimeString()}</div>
+            `;
+            
+            chatMessages.appendChild(responseDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 요약 응답 추가
+        function addSummaryResponse(summary) {
+            const chatMessages = document.getElementById('chatMessages');
+            const responseDiv = document.createElement('div');
+            responseDiv.className = 'message bot';
+            
+            let content = `<div class="special-response">
+                <strong>대화 요약</strong><br>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-label">총 메시지</div>
+                        <div class="summary-value">${summary.total_messages}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">사용자</div>
+                        <div class="summary-value">${summary.user_messages}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">봇</div>
+                        <div class="summary-value">${summary.assistant_messages}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">대화 시간</div>
+                        <div class="summary-value">${summary.duration_seconds.toFixed(1)}초</div>
+                    </div>
+                </div>
+            </div>`;
+            
+            responseDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">${content}</div>
+                <div class="message-time">${new Date().toLocaleTimeString()}</div>
+            `;
+            
+            chatMessages.appendChild(responseDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 검색 결과 추가
+        function addSearchResponse(results) {
+            const chatMessages = document.getElementById('chatMessages');
+            const responseDiv = document.createElement('div');
+            responseDiv.className = 'message bot';
+            
+            let content = `<div class="special-response">
+                <strong>검색 결과</strong><br>`;
+            
+            if (Array.isArray(results)) {
+                results.forEach((item, index) => {
+                    const role = item.role === 'user' ? '사용자' : '봇';
+                    const time = new Date(item.timestamp).toLocaleString();
+                    content += `<div class="search-result">
+                        ${index + 1}. [${time}] ${role}: ${item.content}
+                    </div>`;
+                });
+            }
+            
+            content += '</div>';
+            
+            responseDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">${content}</div>
+                <div class="message-time">${new Date().toLocaleTimeString()}</div>
+            `;
+            
+            chatMessages.appendChild(responseDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 에러 메시지 추가
+        function addErrorMessage(message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'message bot';
+            
+            errorDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="error-message">${message}</div>
+                </div>
+                <div class="message-time">${new Date().toLocaleTimeString()}</div>
+            `;
+            
+            chatMessages.appendChild(errorDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 타이핑 표시
+        function showTyping() {
+            isTyping = true;
+            document.getElementById('typingIndicator').style.display = 'block';
+            document.getElementById('sendBtn').disabled = true;
+            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+        }
+
+        // 타이핑 숨김
+        function hideTyping() {
+            isTyping = false;
+            document.getElementById('typingIndicator').style.display = 'none';
+            document.getElementById('sendBtn').disabled = false;
+        }
+
+        // 채팅 초기화
+        function clearChat() {
+            if (confirm('대화 기록을 초기화하시겠습니까?')) {
+                clearChatMessages();
+                currentSessionId = 'default_' + Date.now();
+            }
+        }
+
+        // 채팅 메시지 초기화
+        function clearChatMessages() {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = `
+                <div class="message bot">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content">
+                        대화가 초기화되었습니다. 새로운 대화를 시작하세요!<br>
+                        <small>특별 명령어: '히스토리', '요약', '검색 [키워드]', '초기화', '도움말'</small>
+                    </div>
+                    <div class="message-time">${new Date().toLocaleTimeString()}</div>
+                </div>
+            `;
+        }
+
+        // 세션 목록 로드
+        async function loadSessions() {
+            try {
+                const response = await fetch('/api/sessions');
+                const data = await response.json();
+                
+                if (data.sessions && data.sessions.length > 0) {
+                    const sessionList = data.sessions.slice(0, 5).join('\n');
+                    addMessage('bot', `사용 가능한 세션:\n${sessionList}`);
+                } else {
+                    addMessage('bot', '저장된 세션이 없습니다.');
+                }
+            } catch (error) {
+                addErrorMessage('세션 목록을 불러오는 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 폼 제출 이벤트
+        document.getElementById('chatForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            sendMessage();
+        });
+
+        // 입력창 자동 크기 조정
+        document.getElementById('messageInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+    </script>
+</body>
+</html>
