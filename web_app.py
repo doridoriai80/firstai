@@ -6,6 +6,7 @@ from datetime import datetime
 from rule_engine import get_rule_response
 from llm_api import get_llm_response
 from conversation_manager import ConversationManager
+from file_analyzer import FileAnalyzer
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # 실제 운영시에는 환경변수로 설정
@@ -14,10 +15,52 @@ CORS(app)
 # 전역 대화 히스토리 관리자 (실제 운영시에는 데이터베이스 사용 권장)
 conversation_managers = {}
 
+# 파일 분석기 초기화
+file_analyzer = FileAnalyzer()
+
 @app.route('/')
 def index():
     """메인 페이지"""
     return render_template('index.html')
+
+@app.route('/api/upload-file', methods=['POST'])
+def upload_file():
+    """파일 업로드 및 분석"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': '파일이 선택되지 않았습니다.'
+            }), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'error': '파일이 선택되지 않았습니다.'
+            }), 400
+        
+        # 파일 분석
+        result = file_analyzer.analyze_file(file)
+        
+        if result['success']:
+            # 파일 정보 요약 생성
+            summary = file_analyzer.get_file_summary(result['file_info'])
+            
+            return jsonify({
+                'success': True,
+                'file_info': result['file_info'],
+                'summary': summary,
+                'message': '파일이 성공적으로 분석되었습니다.'
+            })
+        else:
+            return jsonify(result), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'파일 업로드 중 오류가 발생했습니다: {str(e)}'
+        }), 500
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -73,10 +116,17 @@ def chat():
 • '히스토리': 대화 기록 보기
 • '요약': 대화 요약 보기  
 • '검색 [키워드]': 메시지 검색
-• '초기화': 대화 기록 삭제"""
+• '초기화': 대화 기록 삭제
+• '파일 분석': 업로드된 파일에 대해 질문"""
             return jsonify({
                 'response': help_text,
                 'type': 'help'
+            })
+        elif user_message.startswith("파일 분석"):
+            # 파일 분석 관련 질문 처리
+            return jsonify({
+                'response': '파일을 업로드하고 분석할 수 있습니다. 파일 업로드 버튼을 사용하거나 파일에 대해 질문해주세요.',
+                'type': 'file_analysis'
             })
         
         # 일반 대화 처리
@@ -134,6 +184,21 @@ def load_session():
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cleanup-files', methods=['POST'])
+def cleanup_files():
+    """오래된 파일 정리"""
+    try:
+        file_analyzer.cleanup_files()
+        return jsonify({
+            'success': True,
+            'message': '오래된 파일이 정리되었습니다.'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'파일 정리 중 오류가 발생했습니다: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
     # templates 폴더가 없으면 생성

@@ -7,6 +7,7 @@
 - 규칙 기반 응답 (`rule_engine.py`)
 - OpenAI API를 통한 LLM 연동 (`llm_api.py`)
 - 대화 히스토리 관리 (`conversation_manager.py`)
+- 파일 분석 기능 (`file_analyzer.py`)
 - 웹 애플리케이션 (`web_app.py`)
 - 메인 실행 (`main.py`)
 
@@ -18,6 +19,14 @@
 - **대화 요약**: 대화 통계 및 요약 정보 제공
 - **파일 저장**: 대화 기록을 JSON 파일로 자동 저장
 - **웹 인터페이스**: 모던하고 아름다운 웹 UI 제공
+- **파일 업로드 및 분석**: 다양한 파일 형식 지원 및 AI 분석
+
+## 지원하는 파일 형식
+- **텍스트 파일**: `.txt` (UTF-8, CP949 인코딩 지원)
+- **PDF 문서**: `.pdf` (텍스트 추출)
+- **Word 문서**: `.docx` (텍스트 추출)
+- **Excel 파일**: `.xlsx` (테이블 데이터 추출)
+- **이미지 파일**: `.jpg`, `.jpeg`, `.png`, `.gif` (OCR 텍스트 추출)
 
 ## 환경설정 및 의존성 설치
 1. (선택) 가상환경 생성 및 활성화
@@ -29,13 +38,21 @@
    ```bash
    pip install -r requirements.txt
    ```
-3. OpenAI API 키 설정
+3. OCR 기능 사용을 위한 추가 설치 (선택사항)
+   ```bash
+   # macOS
+   brew install tesseract
+   
+   # Windows
+   # https://github.com/UB-Mannheim/tesseract/wiki 에서 설치
+   ```
+4. OpenAI API 키 설정
    - `config.py` 파일의 `OPENAI_API_KEY`에 본인의 OpenAI API 키를 입력하세요.
    - 예시:
      ```python
      OPENAI_API_KEY = "sk-..."
      ```
-4. 실행
+5. 실행
    ```bash
    # 콘솔 버전
    python main.py
@@ -43,7 +60,7 @@
    # 웹 버전
    python web_app.py
    ```     
-5. 가상환경 종료
+6. 가상환경 종료
    ```bash
    deactivate
    ```
@@ -77,6 +94,13 @@ Bot: 오늘의 날씨는 맑음입니다.
 - 실시간 타이핑 표시
 - 대화 기록 자동 저장
 - 반응형 디자인 (모바일 지원)
+- **파일 업로드 및 분석 기능**
+
+### 파일 업로드 및 분석
+1. **파일 업로드**: 웹 UI의 "📁 파일 업로드" 버튼 클릭
+2. **파일 선택**: 지원하는 형식의 파일 선택
+3. **자동 분석**: 파일 내용이 자동으로 분석되어 표시
+4. **질문하기**: 업로드된 파일에 대해 질문 가능
 
 ### 특별 명령어
 - `히스토리`: 최근 20개의 대화 기록을 보여줍니다
@@ -111,12 +135,14 @@ firstai/
 ├── rule_engine.py            # 규칙 기반 응답 엔진
 ├── llm_api.py               # OpenAI API 연동
 ├── conversation_manager.py   # 대화 히스토리 관리
+├── file_analyzer.py         # 파일 분석 기능
 ├── config.py                # 설정 파일
 ├── requirements.txt          # 의존성 패키지 목록
 ├── templates/               # 웹 템플릿
 │   └── index.html          # 메인 웹 페이지
 ├── conversation_history/     # 대화 기록 저장 폴더
 │   └── conversation_*.json  # 대화 기록 파일들
+├── uploads/                 # 업로드된 파일 저장 폴더
 └── README.md               # 프로젝트 문서
 ```
 
@@ -128,6 +154,20 @@ firstai/
 - 🔍 **고급 검색**: 키워드로 이전 대화 검색
 - 📊 **통계 대시보드**: 대화 요약 및 통계 정보
 - 🎯 **직관적인 UX**: 사용하기 쉬운 인터페이스
+- 📁 **파일 업로드**: 드래그 앤 드롭 파일 업로드
+- 🤖 **AI 분석**: 업로드된 파일의 자동 분석
+
+## API 엔드포인트
+
+### 챗봇 관련
+- `GET /` - 메인 페이지
+- `POST /api/chat` - 챗봇 대화
+- `GET /api/sessions` - 세션 목록
+- `POST /api/load-session` - 세션 로드
+
+### 파일 관련
+- `POST /api/upload-file` - 파일 업로드 및 분석
+- `POST /api/cleanup-files` - 오래된 파일 정리
 
 ## 향후 개선 아이디어
 - GUI 인터페이스 추가
@@ -139,3 +179,5 @@ firstai/
 - 성능 모니터링 및 로깅
 - 사용자 인증 시스템
 - 다국어 지원
+- 파일 버전 관리
+- 클라우드 저장소 연동

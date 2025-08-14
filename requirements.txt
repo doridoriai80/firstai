@@ -1,3 +1,8 @@
 openai
 flask
 flask-cors
+PyPDF2
+python-docx
+openpyxl
+Pillow
+pytesseract
