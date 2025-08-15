@@ -196,6 +196,32 @@
             transform: none;
         }
 
+        .file-upload-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .file-upload-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .file-upload-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .file-input {
+            display: none;
+        }
+
         .typing-indicator {
             display: none;
             padding: 12px 16px;
@@ -238,6 +264,14 @@
         .special-response {
             background: #e3f2fd;
             border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+
+        .file-analysis-response {
+            background: #e8f5e8;
+            border-left: 4px solid #4caf50;
             padding: 15px;
             margin: 10px 0;
             border-radius: 8px;
@@ -295,6 +329,14 @@
             color: #c62828;
         }
 
+        .file-info {
+            background: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+
         @media (max-width: 768px) {
             .chat-container {
                 width: 95%;
@@ -329,7 +371,8 @@
                 <div class="message-avatar">🤖</div>
                 <div class="message-content">
                     안녕하세요! AI 챗봇입니다. 무엇을 도와드릴까요?<br>
-                    <small>특별 명령어: '히스토리', '요약', '검색 [키워드]', '초기화', '도움말'</small>
+                    <small>특별 명령어: '히스토리', '요약', '검색 [키워드]', '초기화', '도움말'</small><br>
+                    <small>📁 파일 업로드 기능도 사용할 수 있습니다!</small>
                 </div>
                 <div class="message-time" id="welcomeTime"></div>
             </div>
@@ -344,6 +387,14 @@
         </div>
         
         <div class="chat-input-container">
+            <div class="file-upload-container">
+                <button class="file-upload-btn" onclick="document.getElementById('fileInput').click()">
+                    📁 파일 업로드
+                </button>
+                <input type="file" id="fileInput" class="file-input" accept=".txt,.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif" onchange="handleFileUpload(event)">
+                <span id="fileStatus" style="font-size: 12px; color: #666;"></span>
+            </div>
+            
             <form class="chat-input-form" id="chatForm">
                 <textarea 
                     class="chat-input" 
@@ -360,6 +411,7 @@
     <script>
         let currentSessionId = 'default_' + Date.now();
         let isTyping = false;
+        let currentFileInfo = null;
 
         // 페이지 로드 시 현재 시간 표시
         document.addEventListener('DOMContentLoaded', function() {
@@ -372,6 +424,46 @@
             if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
                 sendMessage();
+            }
+        }
+
+        // 파일 업로드 처리
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const fileStatus = document.getElementById('fileStatus');
+            fileStatus.textContent = '파일 업로드 중...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/upload-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentFileInfo = data.file_info;
+                    fileStatus.textContent = `✅ ${file.name} 업로드 완료`;
+                    
+                    // 파일 분석 결과를 채팅에 표시
+                    addFileAnalysisResponse(data.summary);
+                    
+                    // 파일에 대한 질문 안내
+                    setTimeout(() => {
+                        addMessage('bot', `파일이 성공적으로 분석되었습니다! 이제 파일에 대해 질문해주세요. 예시:\n• "이 파일의 주요 내용은 무엇인가요?"\n• "파일에서 특정 키워드를 찾아주세요"\n• "파일을 요약해주세요"`);
+                    }, 1000);
+                } else {
+                    fileStatus.textContent = `❌ ${data.error}`;
+                    addErrorMessage(`파일 업로드 실패: ${data.error}`);
+                }
+            } catch (error) {
+                fileStatus.textContent = '❌ 업로드 실패';
+                addErrorMessage('파일 업로드 중 오류가 발생했습니다: ' + error.message);
             }
         }
 
@@ -414,6 +506,8 @@
                     clearChatMessages();
                 } else if (data.type === 'help') {
                     addMessage('bot', data.response);
+                } else if (data.type === 'file_analysis') {
+                    addMessage('bot', data.response);
                 } else {
                     addMessage('bot', data.response);
                 }
@@ -440,6 +534,27 @@
             `;
             
             chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 파일 분석 결과 추가
+        function addFileAnalysisResponse(summary) {
+            const chatMessages = document.getElementById('chatMessages');
+            const responseDiv = document.createElement('div');
+            responseDiv.className = 'message bot';
+            
+            responseDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="file-analysis-response">
+                        <strong>📁 파일 분석 완료</strong><br>
+                        ${summary.replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+                <div class="message-time">${new Date().toLocaleTimeString()}</div>
+            `;
+            
+            chatMessages.appendChild(responseDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
@@ -579,6 +694,8 @@
             if (confirm('대화 기록을 초기화하시겠습니까?')) {
                 clearChatMessages();
                 currentSessionId = 'default_' + Date.now();
+                currentFileInfo = null;
+                document.getElementById('fileStatus').textContent = '';
             }
         }
 
@@ -590,7 +707,8 @@
                     <div class="message-avatar">🤖</div>
                     <div class="message-content">
                         대화가 초기화되었습니다. 새로운 대화를 시작하세요!<br>
-                        <small>특별 명령어: '히스토리', '요약', '검색 [키워드]', '초기화', '도움말'</small>
+                        <small>특별 명령어: '히스토리', '요약', '검색 [키워드]', '초기화', '도움말'</small><br>
+                        <small>📁 파일 업로드 기능도 사용할 수 있습니다!</small>
                     </div>
                     <div class="message-time">${new Date().toLocaleTimeString()}</div>
                 </div>
